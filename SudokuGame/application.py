@@ -7,14 +7,16 @@ class App:
         pygame.init()
         self.window = pygame.display.set_mode((WIDTH, HEIGHT))
         self.running = True
-        self.grid = testBoard1
+        self.grid = testBoard2
         self.selectedCell = None
         self.mousePosition = None
         self.state = "playing"
         self.playButtons = []
         self.menuButtons = []
         self.endButtons = []
-        self.loadButtons()
+        self.lockedCells = []
+        self.font = pygame.font.SysFont("arial",cellSize//2)
+        self.load()
 
     def run(self):
         while self.running:
@@ -31,6 +33,7 @@ class App:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
                 self.running = False
+
             if event.type == pygame.MOUSEBUTTONDOWN:
                 selectedCell = self.mouseOnGrid()
                 if selectedCell:
@@ -38,6 +41,12 @@ class App:
                 else:
                     print("not on Board")
                     self.selectedCell = None
+
+            if event.type == pygame.KEYDOWN:
+                if self.selectedCell != None and self.selectedCell not in self.lockedCells:
+                    if self.isInt(event.unicode):
+                        self.grid[self.selectedCell[1]][self.selectedCell[0]] = int(event.unicode)
+
 
     def play_update(self):
         self.mousePosition = pygame.mouse.get_pos()
@@ -52,10 +61,26 @@ class App:
 
         if self.selectedCell:
             self.drawSelected(self.window, self.selectedCell)
+
+        self.colourLockedCells(self.window,self.lockedCells)
+
+        self.drawNumbers(self.window)
+
         self.drawGrid(self.window)
         pygame.display.update()
 
     # Helpers
+
+    def colourLockedCells(self,window,locked):
+        for cell in locked:
+            pygame.draw.rect(window,LOCKEDCELLSCOLOUR,(cell[0]*cellSize+gridPos[0],cell[1]*cellSize+gridPos[1],cellSize,cellSize))
+
+    def drawNumbers(self,window):
+        for yindx,row in enumerate(self.grid):
+            for xindx, number in enumerate(row):
+                if number !=0:
+                    pos = [(xindx*cellSize)+gridPos[0],(yindx*cellSize)+gridPos[1]]
+                    self.textToWindow(window,str(number),pos)
 
     def drawSelected(self, window, pos):
         pygame.draw.rect(window, BLUE,
@@ -84,3 +109,25 @@ class App:
 
     def loadButtons(self):
         self.playButtons.append(Button(20,40,100,40))
+
+    def textToWindow(self, window, text, pos):
+        font = self.font.render(text,False,BLACK)
+        fontWidth = font.get_width()
+        fontHeight = font.get_height()
+        pos[0] += (cellSize-fontWidth)//2
+        pos[1] += (cellSize-fontHeight)//2
+        window.blit(font, pos)
+
+    def load(self):
+        self.loadButtons()
+        for yindx, row in enumerate(self.grid):
+            for xindx, number in enumerate(row):
+                if number !=0:
+                    self.lockedCells.append([xindx,yindx])
+
+    def isInt(self,string):
+        try:
+            int(string)
+            return True
+        except:
+            return False
