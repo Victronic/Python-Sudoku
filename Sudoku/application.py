@@ -7,7 +7,7 @@ class App:
         pygame.init()
         self.window = pygame.display.set_mode((WIDTH, HEIGHT))
         self.running = True
-        self.grid = finishedBoard
+        self.grid = testBoard2
         self.selectedCell = None
         self.mousePosition = None
         self.state = "playing"
@@ -61,7 +61,8 @@ class App:
             if self.allCellsAreDone():
                 #check if board is correct
                 self.checkAllCells()
-                print(self.incorrectCells)
+                if len(self.incorrectCells) == 0:
+                    print("Congratulation!")
 
     def play_draw(self):
         self.window.fill(WHITE)
@@ -92,8 +93,8 @@ class App:
 
     def checkAllCells(self):
         self.checkRows()
-        #self.checkCols()
-        #self.checkSmallGrif()
+        self.checkColls()
+        self.checkSmallGrid()
 
     def checkRows(self):
         for yindx, row in enumerate(self.grid):
@@ -102,8 +103,49 @@ class App:
                 if self.grid[yindx][xindx] in possible:
                     possible.remove(self.grid[yindx][xindx])
                 else:
-                    if [xindx, yindx] not in self.lockedCells:
+                    if [xindx, yindx] not in self.lockedCells and [xindx][yindx] not in self.incorrectCells:
                         self.incorrectCells.append([xindx,yindx])
+                    if [xindx, yindx] in self.lockedCells:
+                        for k in range(9):
+                            if self.grid[yindx][k] == self.grid[yindx][xindx] and [k,yindx] not in self.lockedCells:
+                                self.incorrectCells.append([k,yindx])
+
+    def checkColls(self):
+        for xindx in range(9):
+            possible = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+            for yindx, row in enumerate(self.grid):
+                if self.grid[yindx][xindx] in possible:
+                    possible.remove(self.grid[yindx][xindx])
+                else:
+                    if [xindx, yindx] not in self.lockedCells and [xindx][yindx] not in self.incorrectCells:
+                        self.incorrectCells.append([xindx,yindx])
+                    if [xindx,yindx] in self.lockedCells:
+                        for k,row in enumerate(self.grid):
+                            if self.grid[k][xindx] == self.grid[yindx][xindx] and [xindx,k] not in self.lockedCells:
+                                self.incorrectCells.append([xindx,k])
+
+    def checkSmallGrid(self):
+        for x in range(3):
+            for y in range(3):
+                possibles = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+                for i in range(3):
+                    for j in range(3):
+                        xindx = x*3+i
+                        yindx = y*3+j
+                        if self.grid[yindx][xindx] in possibles:
+                            possibles.remove(self.grid[yindx][xindx])
+                        else:
+                            if [xindx,yindx] not in self.lockedCells and [xindx,yindx] not in self.incorrectCells:
+                                self.incorrectCells.append([xindx,yindx])
+                            if [xindx, yindx] in self.lockedCells:
+                                for k in range(3):
+                                    for l in range(3):
+                                        xindx2 = x*3+k
+                                        yindx2 = y*3+l
+                                        if self.grid[yindx2][xindx2] == self.grid[yindx][xindx] and [xindx2,yindx2] not in self.lockedCells:
+                                            self.incorrectCells.append([xindx2,yindx2])
+
+
 
 
     # Helpers
