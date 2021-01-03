@@ -1,3 +1,5 @@
+__doc__="attributes"
+
 import pygame
 
 class Button:
@@ -14,6 +16,10 @@ class Button:
         self.highlighted = False
 
     def update(self,mouse):
+        """
+        :param mouse:
+        :return:
+        """
         if self.rect.collidepoint(mouse):
             self.highlighted = True
         else:
