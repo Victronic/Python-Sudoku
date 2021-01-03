@@ -9,8 +9,10 @@ class App:
         self.window = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("SUDOKU")
         self.running = True
-        self.grid = testBoardUncompleted
         self.completedGrid = testBoardCompleted
+        print(self.completedGrid)
+        self.grid = testBoardUncompleted
+        print(self.grid)
         self.selectedCell = None
         self.mousePosition = None
         self.state = "playing"
