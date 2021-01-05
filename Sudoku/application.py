@@ -9,29 +9,28 @@ class App:
         self.window = pygame.display.set_mode((WIDTH, HEIGHT))
         pygame.display.set_caption("SUDOKU")
         self.running = True
-        self.completedGrid = testBoardCompleted
-        print(self.completedGrid)
-        self.grid = testBoardUncompleted
-        print(self.grid)
+        self.grid = generateRandomUncompletedBoard()
         self.selectedCell = None
         self.mousePosition = None
         self.state = "playing"
         self.finished = False
         self.cellChanged = False
+        self.endGame = False
         self.playButtons = []
         self.menuButtons = []
         self.endButtons = []
         self.lockedCells = []
         self.incorrectCells = []
         self.font = pygame.font.SysFont("arial", cellSize // 2)
+        self.start = 0
         self.load()
         self.playTime = 0
+        self.timeOut = False
 
     def run(self):
-        start = time.time()
-        while self.running and self.playTime<1800:
-            self.playTime = round(time.time() - start)
-            print(self.playTime)
+        self.start = time.time()
+        while self.running:
+            self.playTime = round(time.time() - self.start)
             if self.state == "playing":
                 self.play_events()
                 self.play_update()
@@ -60,12 +59,29 @@ class App:
                     self.selectedCell = selected
                     print(selected)
 
+
             # Key press
             if event.type == pygame.KEYDOWN:
-                if self.selectedCell != None and self.selectedCell not in self.lockedCells:
+                if self.selectedCell != None and self.selectedCell not in self.lockedCells and not self.endGame and not self.timeOut:
                     if self.isInt(event.unicode):
                         self.grid[self.selectedCell[0]][self.selectedCell[1]] = int(event.unicode)
-                        # self.cellChanged = True
+                        self.cellChanged = True
+
+            if self.endGame or self.timeOut:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_r:
+                        print("reset")
+                        self.endGame = False
+                        self.grid = generateRandomUncompletedBoard()
+                        self.lockedCells = []
+                        self.load()
+                        self.start = time.time()
+                        self.timeOut = False
+                        self.playTime = 0
+                        print(self.timeOut)
+                        self.play_events()
+                        self.play_update()
+                        self.play_draw()
 
 
 
@@ -75,16 +91,15 @@ class App:
         for button in self.playButtons:
             button.update(self.mousePosition)
 
-        if self.grid == self.completedGrid:
-            print("Congratulations")
+        if self.cellChanged:
+            if self.allCellsAreCompleted():
+                if self.checkAllConditionsAreTrue():
+                    self.endGame = True
 
-        # if self.cellChanged:
-        #     self.incorrectCells = []
-        #     if self.allCellsAreDone():
-        #         # check if board is correct
-        #         self.checkAllCells()
-        #         if len(self.incorrectCells) == 0:
-        #             print("Congratulation!")
+        if self.playTime>1800:
+            self.timeOut = True
+
+
 
     # 3.Draw
     def play_draw(self):
@@ -99,7 +114,27 @@ class App:
         self.colourLockedCells(self.window, self.lockedCells)
         self.colourIncorrectCells(self.window, self.incorrectCells)
 
-        self.textToWindow(self.window,"time: " + str(29-self.playTime//60) + ":" + str(60-(self.playTime%60)-1),[50,600])
+        self.textToWindow(self.window, "Complete the sudoku grid before the", [700, 10],BLACK)
+        self.textToWindow(self.window, "timer reaches 0 ", [700, 35],BLACK)
+        self.textToWindow(self.window, "Instructions:", [600, 100],BLACK)
+        self.textToWindow(self.window, "1. the grey cells are locked", [700, 150],LOCKEDCELLSCOLOUR)
+        self.textToWindow(self.window, "you can not change them", [700, 175],LOCKEDCELLSCOLOUR)
+        self.textToWindow(self.window, "2. click on a not locked cell", [700, 220],BLUE)
+        self.textToWindow(self.window, "to select it", [700, 245],BLUE)
+        self.textToWindow(self.window, "3. type in a number while a cell is selected", [700, 290],BLUE)
+        self.textToWindow(self.window, "to input a number in it",[700, 315],BLUE)
+        self.textToWindow(self.window, "4.you can delete a number from", [700, 360],BLACK)
+        self.textToWindow(self.window, " a not locked cell by pressing 0", [700, 385],BLACK)
+        self.textToWindow(self.window, "5.If you won the game", [700, 430], GREEN)
+        self.textToWindow(self.window, "or the time runs out,", [700, 455], RED)
+        self.textToWindow(self.window, "you can press 'r' to start a new game ", [700, 480], BLACK)
+
+        if not self.endGame and not self.timeOut:
+            self.textToWindow(self.window,"time: " + str(29-self.playTime//60) + ":" + str(60-(self.playTime%60)-1),[50,600],BLACK)
+        elif self.timeOut and not self.endGame:
+            self.textToWindow(self.window, "Time out", [200, 600], RED)
+        else:
+            self.textToWindow(self.window, "Congratulations you won the game", [200, 600], GREEN)
 
         self.drawNumbers(self.window)
 
@@ -110,78 +145,61 @@ class App:
 
         self.cellChanged = False
 
-    # Time
-    def format_time(secs):
-        sec = secs % 60
-        minute = secs // 60
-        hour = minute // 60
-
-        mat = " " + str(minute) + ":" + str(sec)
-        return mat
     # Board functions
 
-    # def allCellsAreDone(self):
-    #     for row in self.grid:
-    #         for number in row:
-    #             if number == 0:
-    #                 return False
-    #     return True
-    #
-    # def checkAllCells(self):
-    #     self.checkRows()
-    #     self.checkColls()
-    #     self.checkSmallGrid()
-    #
-    # def checkRows(self):
-    #     for yindx, row in enumerate(self.grid):
-    #         possible = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    #         for xindx in range(9):
-    #             if self.grid[yindx][xindx] in possible:
-    #                 possible.remove(self.grid[yindx][xindx])
-    #             else:
-    #                 if [xindx, yindx] not in self.lockedCells and [xindx][yindx] not in self.incorrectCells:
-    #                     self.incorrectCells.append([xindx, yindx])
-    #                 if [xindx, yindx] in self.lockedCells:
-    #                     for k in range(9):
-    #                         if self.grid[yindx][k] == self.grid[yindx][xindx] and [k, yindx] not in self.lockedCells:
-    #                             self.incorrectCells.append([k, yindx])
-    #
-    # def checkColls(self):
-    #     for xindx in range(9):
-    #         possible = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    #         for yindx, row in enumerate(self.grid):
-    #             if self.grid[yindx][xindx] in possible:
-    #                 possible.remove(self.grid[yindx][xindx])
-    #             else:
-    #                 if [xindx, yindx] not in self.lockedCells and [xindx][yindx] not in self.incorrectCells:
-    #                     self.incorrectCells.append([xindx, yindx])
-    #                 if [xindx, yindx] in self.lockedCells:
-    #                     for k, row in enumerate(self.grid):
-    #                         if self.grid[k][xindx] == self.grid[yindx][xindx] and [xindx, k] not in self.lockedCells:
-    #                             self.incorrectCells.append([xindx, k])
-    #
-    # def checkSmallGrid(self):
-    #     for x in range(3):
-    #         for y in range(3):
-    #             possibles = [1, 2, 3, 4, 5, 6, 7, 8, 9]
-    #             for i in range(3):
-    #                 for j in range(3):
-    #                     xindx = x * 3 + i
-    #                     yindx = y * 3 + j
-    #                     if self.grid[yindx][xindx] in possibles:
-    #                         possibles.remove(self.grid[yindx][xindx])
-    #                     else:
-    #                         if [xindx, yindx] not in self.lockedCells and [xindx, yindx] not in self.incorrectCells:
-    #                             self.incorrectCells.append([xindx, yindx])
-    #                         if [xindx, yindx] in self.lockedCells:
-    #                             for k in range(3):
-    #                                 for l in range(3):
-    #                                     xindx2 = x * 3 + k
-    #                                     yindx2 = y * 3 + l
-    #                                     if self.grid[yindx2][xindx2] == self.grid[yindx][xindx] and [xindx2,
-    #                                                                                                  yindx2] not in self.lockedCells:
-    #                                         self.incorrectCells.append([xindx2, yindx2])
+    def allCellsAreCompleted(self):
+        print("am ajuns aici")
+        for i in range(9):
+            for j in range(9):
+                if self.grid[i][j] == 0:
+                    return False
+        return True
 
+    def checkAllConditionsAreTrue(self):
+        if not self.checkRowsCondition():
+            print("falserows")
+            return False
+        if not self.checkColumnsCondition():
+            print("falseCol")
+            return False
+        if not self.checkLittleSquares():
+            print("falseSquare")
+            return False
+        return True
+
+    def checkRowsCondition(self):
+        for row in range(9):
+            d = []
+            for col in range(9):
+                val = self.grid[row][col]
+                if val in d:
+                    return False
+                d.append(val)
+        return True
+
+    def checkColumnsCondition(self):
+        for col in range(9):
+            d = []
+            for row in range(9):
+                val = self.grid[row][col]
+                if val in d:
+                    return False
+                d.append(val)
+        return True
+
+    def checkLittleSquares(self):
+        for i in range(3):
+            for j in range(3):
+                d=[]
+                for ii in range(3):
+                    for jj in range(3):
+                        row = (3*i) + ii
+                        col = (3*j) + jj
+                        val = self.grid[row][col]
+                        if val in d:
+                            return False
+                        d.append(val)
+        return True
     # Helpers
 
     # Colors the locked cells correctly
@@ -201,7 +219,7 @@ class App:
             for j in range(9):
                 if self.grid[i][j] != 0:
                     pos = [(j * cellSize) + gridPos[0], (i * cellSize) + gridPos[1]]
-                    self.textToWindow(window, str(self.grid[i][j]), pos)
+                    self.textToWindow(window, str(self.grid[i][j]), pos,BLACK)
         # for yindx, row in enumerate(self.grid):
         #     for xindx, number in enumerate(row):
         #         if number != 0:
@@ -209,8 +227,8 @@ class App:
         #             self.textToWindow(window, str(number), pos)
 
     #
-    def textToWindow(self, window, text, pos):
-        font = self.font.render(text, False, BLACK)
+    def textToWindow(self, window, text, pos,color):
+        font = self.font.render(text, False, color)
         fontWidth = font.get_width()
         fontHeight = font.get_height()
         pos[0] += (cellSize - fontWidth) // 2

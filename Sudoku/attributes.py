@@ -1,22 +1,24 @@
 __doc__ = "attributes"
 
-from random import sample
+from random import *
 
 # Colors
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 BLUE = (96, 216, 232)
+GREEN = (34,139,34)
+RED = (254,0,0)
 LOCKEDCELLSCOLOUR = (189, 189, 189)
 INCORRECTCELLCOLOUR = (194, 120, 120)
+TEXTCOLOR = ((96, 216, 232))
 
 
 # boards
-
-def generateRandomCompletedBoard():
+def generateRandomUncompletedBoard():
     possibleNumber = [1, 2, 3, 4, 5, 6, 7, 8, 9]
     board = [[0 for i in range(9)] for j in range(9)]
 
-    line = sample(possibleNumber,len(possibleNumber))
+    line = sample(possibleNumber, len(possibleNumber))
     board[0] = line
     line = line[3:] + line[:3]
     board[1] = line
@@ -35,11 +37,13 @@ def generateRandomCompletedBoard():
     line = line[3:] + line[:3]
     board[8] = line
 
-    return board
-
-def removeElementsFromBoard(board,number):
-    for cellnumber in sample(range(81),number):
-        board[cellnumber//9][cellnumber%9] = 0
+    for i in range(30):
+        i = randint(0, 8)
+        j = randint(0, 8)
+        while board[i][j] == 0:
+            i = randint(0, 8)
+            j = randint(0, 8)
+        board[i][j] = 0
     return board
 
 
@@ -53,11 +57,6 @@ testBoardCompleted1 = [[5, 3, 4, 6, 7, 8, 9, 1, 2],
                       [2, 8, 7, 4, 1, 9, 6, 3, 5],
                       [3, 4, 5, 2, 8, 6, 1, 7, 9]]
 
-Board = generateRandomCompletedBoard()
-testBoardCompleted = Board
-print(testBoardCompleted)
-testBoardUncompleted = removeElementsFromBoard(Board,40)
-print(testBoardUncompleted)
 
 testBoardUncompleted1 = [[0, 3, 0, 6, 0, 0, 9, 0, 2],
                          [6, 0, 2, 1, 0, 5, 0, 0, 8],
