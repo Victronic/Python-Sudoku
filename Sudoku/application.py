@@ -1,6 +1,7 @@
-import pygame, sys, time
+import pygame
+import sys
+import time
 from attributes import *
-from button import *
 
 
 class App:
@@ -13,14 +14,9 @@ class App:
         self.selectedCell = None
         self.mousePosition = None
         self.state = "playing"
-        self.finished = False
         self.cellChanged = False
         self.endGame = False
-        self.playButtons = []
-        self.menuButtons = []
-        self.endButtons = []
         self.lockedCells = []
-        self.incorrectCells = []
         self.font = pygame.font.SysFont("arial", cellSize // 2)
         self.start = 0
         self.load()
@@ -38,10 +34,14 @@ class App:
         pygame.quit()
         sys.exit()
 
-    # Playing Game State
+    # PLAYING GAME STATE #
     # 1.Events
     def play_events(self):
+        """
+        Handles the events of the game
+        """
         for event in pygame.event.get():
+
             # Quit button
             if event.type == pygame.QUIT:
                 self.running = False
@@ -49,125 +49,89 @@ class App:
             # Mouse Click
             if event.type == pygame.MOUSEBUTTONDOWN:
                 selected = self.mouseOnGrid()
-                if not selected:
-                    print("not on Board")
-                    self.selectedCell = None
-                elif selected in self.lockedCells:
-                    print("You can not select locked cells")
+                if not selected or selected in self.lockedCells:
                     self.selectedCell = None
                 else:
                     self.selectedCell = selected
-                    print(selected)
-
 
             # Key press
             if event.type == pygame.KEYDOWN:
-                if self.selectedCell != None and self.selectedCell not in self.lockedCells and not self.endGame and not self.timeOut:
+                if self.selectedCell is not None and self.selectedCell not in self.lockedCells and not self.endGame and not self.timeOut:
                     if self.isInt(event.unicode):
                         self.grid[self.selectedCell[0]][self.selectedCell[1]] = int(event.unicode)
                         self.cellChanged = True
 
+            # Reset game
             if self.endGame or self.timeOut:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_r:
-                        print("reset")
-                        self.endGame = False
-                        self.grid = generateRandomUncompletedBoard()
-                        self.lockedCells = []
-                        self.load()
-                        self.start = time.time()
-                        self.timeOut = False
-                        self.playTime = 0
-                        print(self.timeOut)
-                        self.play_events()
-                        self.play_update()
-                        self.play_draw()
-
-
+                        self.resetGame()
 
     # 2.Update
     def play_update(self):
+        """
+        Handles the updates of the game state
+        """
         self.mousePosition = pygame.mouse.get_pos()
-        for button in self.playButtons:
-            button.update(self.mousePosition)
 
         if self.cellChanged:
             if self.allCellsAreCompleted():
-                if self.checkAllConditionsAreTrue():
+                if self.allConditionsAreTrue():
                     self.endGame = True
 
-        if self.playTime>1800:
+        if self.playTime > 1800:
             self.timeOut = True
-
-
 
     # 3.Draw
     def play_draw(self):
-        self.window.fill(WHITE)  # fill with white
-
-        for button in self.playButtons:
-            button.draw(self.window)
+        """
+        Handles the draws of the games components
+        """
+        self.window.fill(WHITE)
 
         if self.selectedCell:
             self.drawSelected(self.window, self.selectedCell)
 
         self.colourLockedCells(self.window, self.lockedCells)
-        self.colourIncorrectCells(self.window, self.incorrectCells)
 
-        self.textToWindow(self.window, "Complete the sudoku grid before the", [700, 10],BLACK)
-        self.textToWindow(self.window, "timer reaches 0 ", [700, 35],BLACK)
-        self.textToWindow(self.window, "Instructions:", [600, 100],BLACK)
-        self.textToWindow(self.window, "1. the grey cells are locked", [700, 150],LOCKEDCELLSCOLOUR)
-        self.textToWindow(self.window, "you can not change them", [700, 175],LOCKEDCELLSCOLOUR)
-        self.textToWindow(self.window, "2. click on a not locked cell", [700, 220],BLUE)
-        self.textToWindow(self.window, "to select it", [700, 245],BLUE)
-        self.textToWindow(self.window, "3. type in a number while a cell is selected", [700, 290],BLUE)
-        self.textToWindow(self.window, "to input a number in it",[700, 315],BLUE)
-        self.textToWindow(self.window, "4.you can delete a number from", [700, 360],BLACK)
-        self.textToWindow(self.window, " a not locked cell by pressing 0", [700, 385],BLACK)
-        self.textToWindow(self.window, "5.If you won the game", [700, 430], GREEN)
-        self.textToWindow(self.window, "or the time runs out,", [700, 455], RED)
-        self.textToWindow(self.window, "you can press 'r' to start a new game ", [700, 480], BLACK)
-
-        if not self.endGame and not self.timeOut:
-            self.textToWindow(self.window,"time: " + str(29-self.playTime//60) + ":" + str(60-(self.playTime%60)-1),[50,600],BLACK)
-        elif self.timeOut and not self.endGame:
-            self.textToWindow(self.window, "Time out", [200, 600], RED)
-        else:
-            self.textToWindow(self.window, "Congratulations you won the game", [200, 600], GREEN)
+        self.instructions()
+        self.timer()
 
         self.drawNumbers(self.window)
-
         self.drawGrid(self.window)
-
 
         pygame.display.update()
 
         self.cellChanged = False
 
-    # Board functions
+    # BOARD FUNCTIONS
 
     def allCellsAreCompleted(self):
-        print("am ajuns aici")
+        """
+        :return: boolean (depending on the state of the completed cells)
+        """
         for i in range(9):
             for j in range(9):
                 if self.grid[i][j] == 0:
                     return False
         return True
 
-    def checkAllConditionsAreTrue(self):
+    def allConditionsAreTrue(self):
+        """
+        :return: boolean (depending on the completed puzzle)
+        """
         if not self.checkRowsCondition():
-            print("falserows")
             return False
         if not self.checkColumnsCondition():
-            print("falseCol")
             return False
         if not self.checkLittleSquares():
-            print("falseSquare")
             return False
         return True
 
     def checkRowsCondition(self):
+        """
+        :return: boolean (depending on the correctness of the rows)
+        """
         for row in range(9):
             d = []
             for col in range(9):
@@ -178,6 +142,9 @@ class App:
         return True
 
     def checkColumnsCondition(self):
+        """
+        :return: boolean (depending on the correctness of the columns)
+        """
         for col in range(9):
             d = []
             for row in range(9):
@@ -188,60 +155,121 @@ class App:
         return True
 
     def checkLittleSquares(self):
+        """
+        :return: boolean (depending on the correctness of the small squares)
+        """
         for i in range(3):
             for j in range(3):
-                d=[]
+                d = []
                 for ii in range(3):
                     for jj in range(3):
-                        row = (3*i) + ii
-                        col = (3*j) + jj
+                        row = (3 * i) + ii
+                        col = (3 * j) + jj
                         val = self.grid[row][col]
                         if val in d:
                             return False
                         d.append(val)
         return True
-    # Helpers
 
-    # Colors the locked cells correctly
+    # HELPERS
+
+    def resetGame(self):
+        """
+        Resets the variables of the game so a new one is created
+        """
+        self.endGame = False
+        self.grid = generateRandomUncompletedBoard()
+        self.lockedCells = []
+        self.load()
+        self.start = time.time()
+        self.timeOut = False
+        self.playTime = 0
+
+    def instructions(self):
+        """
+        calls the function to write on the window
+        """
+        self.textToWindow(self.window, "Complete the sudoku grid before the", [700, 10], BLACK)
+        self.textToWindow(self.window, "timer reaches 0 ", [700, 35], BLACK)
+        self.textToWindow(self.window, "Instructions:", [700, 100], BLACK)
+        self.textToWindow(self.window, "1. the grey cells are locked", [700, 150], LOCKEDCELLSCOLOUR)
+        self.textToWindow(self.window, "you can not change them", [700, 175], LOCKEDCELLSCOLOUR)
+        self.textToWindow(self.window, "2. click on a not locked cell", [700, 220], BLUE)
+        self.textToWindow(self.window, "to select it", [700, 245], BLUE)
+        self.textToWindow(self.window, "3. type in a number while a cell is selected", [700, 290], BLUE)
+        self.textToWindow(self.window, "to input a number in it", [700, 315], BLUE)
+        self.textToWindow(self.window, "4.you can delete a number from", [700, 360], BLACK)
+        self.textToWindow(self.window, " a not locked cell by pressing 0", [700, 385], BLACK)
+        self.textToWindow(self.window, "5.If you won the game", [700, 430], GREEN)
+        self.textToWindow(self.window, "or the time runs out,", [700, 455], RED)
+        self.textToWindow(self.window, "you can press 'r' to start a new game ", [700, 480], BLACK)
+        self.textToWindow(self.window, "6. Once the game is over you can't", [700, 525], BLACK)
+        self.textToWindow(self.window, "interact with the board anymore", [700, 550], BLACK)
+
+    def timer(self):
+        """
+        Calls the function to write the timer or the state of the game on the window
+        """
+        if not self.endGame and not self.timeOut:
+            self.textToWindow(self.window,
+                              "time: " + str(29 - self.playTime // 60) + ":" + str(60 - (self.playTime % 60) - 1),
+                              [50, 600], BLACK)
+        elif self.timeOut and not self.endGame:
+            self.textToWindow(self.window, "Time out", [200, 600], RED)
+        else:
+            self.textToWindow(self.window, "Congratulations you won the game", [200, 600], GREEN)
+
     def colourLockedCells(self, window, locked):
+        """
+        :param window: the window where the modifications are made
+        :param locked: the list of position where the change is made
+        Colours the list of numbers that are already in the puzzle
+        """
         for cell in locked:
             pygame.draw.rect(window, LOCKEDCELLSCOLOUR,
                              (cell[1] * cellSize + gridPos[0], cell[0] * cellSize + gridPos[1], cellSize, cellSize))
 
-    def colourIncorrectCells(self, window, incorrect):
-        for cell in incorrect:
-            pygame.draw.rect(window, INCORRECTCELLCOLOUR,
-                             (cell[1] * cellSize + gridPos[0], cell[0] * cellSize + gridPos[1], cellSize, cellSize))
-
-    # The initial numbers are drawn correctly
     def drawNumbers(self, window):
+        """
+        :param window: the window where the modifications are made
+        Draws the numbers of the puzzle
+        """
         for i in range(9):
             for j in range(9):
                 if self.grid[i][j] != 0:
                     pos = [(j * cellSize) + gridPos[0], (i * cellSize) + gridPos[1]]
-                    self.textToWindow(window, str(self.grid[i][j]), pos,BLACK)
-        # for yindx, row in enumerate(self.grid):
-        #     for xindx, number in enumerate(row):
-        #         if number != 0:
-        #             pos = [(xindx * cellSize) + gridPos[0], (yindx * cellSize) + gridPos[1]]
-        #             self.textToWindow(window, str(number), pos)
+                    self.textToWindow(window, str(self.grid[i][j]), pos, BLACK)
 
-    #
-    def textToWindow(self, window, text, pos,color):
+    def textToWindow(self, window, text, pos, color):
+        """
+        :param window: the window where the modifications are made
+        :param text: the text given
+        :param pos: the position to be draw
+        :param color: the color to be used
+        Writes text on the window
+        """
+
         font = self.font.render(text, False, color)
-        fontWidth = font.get_width()
-        fontHeight = font.get_height()
-        pos[0] += (cellSize - fontWidth) // 2
-        pos[1] += (cellSize - fontHeight) // 2
+        font_width = font.get_width()
+        font_height = font.get_height()
+        pos[0] += (cellSize - font_width) // 2
+        pos[1] += (cellSize - font_height) // 2
         window.blit(font, pos)
 
-    # Draw the selected cell correctly
     def drawSelected(self, window, pos):
+        """
+        :param window: the window where the modifications are made
+        :param pos: the position to be draw
+        Draws a square at the selected square to highlight it
+        """
         pygame.draw.rect(window, BLUE,
                          ((pos[1] * cellSize) + gridPos[0], (pos[0] * cellSize) + gridPos[1], cellSize, cellSize))
 
-    # Grid draw correctly
     def drawGrid(self, window):
+        """
+        :param window: the window where the modifications are made
+        Draws the sudoku grid
+        """
         for x in range(10):
             if x % 3 != 0:
                 pygame.draw.line(window, BLACK, (gridPos[0] + (x * cellSize), gridPos[1]),
@@ -254,32 +282,31 @@ class App:
                 pygame.draw.line(window, BLACK, (gridPos[0], gridPos[1] + (x * cellSize)),
                                  (gridPos[0] + 450, gridPos[1] + (x * cellSize)), 3)
 
-    # Mouse position on grid correctly taken
     def mouseOnGrid(self):
-        # mouse on the board=> return the matrix indices, else return false
+        """
+        :return: the position in matrix indices where the mouse left button was pressed (if on the puzzle)
+        """
         if self.mousePosition[0] < gridPos[0] or self.mousePosition[1] < gridPos[1]:
             return False
         if self.mousePosition[0] > gridPos[0] + gridSize or self.mousePosition[1] > gridPos[1] + gridSize:
             return False
         return [(self.mousePosition[1] - gridPos[1]) // cellSize, (self.mousePosition[0] - gridPos[0]) // cellSize]
 
-    # Load buttons to window correctly
-    def loadButtons(self):
-        self.playButtons.append(Button(20, 40, 100, 40))
-
-    # Load the buttons and make the locked cells list
     def load(self):
-        self.loadButtons()
+        """
+        Creates locked cells list
+        :return:
+        """
         for i in range(9):
             for j in range(9):
                 if self.grid[i][j] != 0:
-                    self.lockedCells.append([i,j])
-        # for yindx, row in enumerate(self.grid):
-        #     for xindx, number in enumerate(row):
-        #         if number != 0:
-        #             self.lockedCells.append([xindx, yindx])
+                    self.lockedCells.append([i, j])
 
     def isInt(self, string):
+        """
+        :param string: key the user has pressed
+        :return: True if a number, False if not
+        """
         try:
             int(string)
             return True
